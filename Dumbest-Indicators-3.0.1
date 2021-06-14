@@ -1,0 +1,82 @@
+// @version=2
+study(shorttitle = "The Dumbest Indicators 3.0.1", title="Indicates everything", overlay=false)
+
+// all the love for my @colejustice for helping me code parts of the momo, @infamouscrow for backtesting, and @funkyfreshhh for testing it out. 
+
+// Donate at luchasarie@gmail.com (paypal) to help me get out of the favela
+
+// Code Begins Below
+
+// BOLLINGER BANDS FOR MOMO
+
+length = input(20, title="BB Length")
+mult = input(2.0,title="BB MultFactor")
+lengthKC=input(20, title="KC Length")
+multKC = input(1.5, title="KC MultFactor")
+
+useTrueRange = input(true, title="Use TrueRange (KC)", type=bool)
+
+// TURBO CCI
+source = close
+basis = sma(source, length)
+dev = multKC * stdev(source, length)
+upperBB = basis + dev
+lowerBB = basis - dev
+
+lens = input(14, minval=1)
+ups = rma(max(change(source), 0), lens)
+downs = rma(-min(change(source), 0), lens)
+rsi = (downs == 0 ? 100 : ups == 0 ? 0 : 100 - (100 / (1 + ups / downs))-50)
+
+
+cciTurboLength = input(title="CCI Turbo Length", type=integer, defval=8, minval=3, maxval=14)
+cciTurbo = (cci(source, cciTurboLength)/4)
+
+
+// MOMO CODE (INCRASED AND LIMITED)
+ma = sma(source, lengthKC)
+range = useTrueRange ? tr : (high - low)
+rangema = sma(range, lengthKC)
+upperKC = ma + rangema * multKC
+lowerKC = ma - rangema * multKC
+
+sqzOn  = (lowerBB > lowerKC) and (upperBB < upperKC)
+sqzOff = (lowerBB < lowerKC) and (upperBB > upperKC)
+noSqz  = (sqzOn == false) and (sqzOff == false)
+bigval = (source  -  avg(avg(highest(high, lengthKC), lowest(low, lengthKC)),sma(close,lengthKC)))*100
+bigval := min(bigval, 75)
+bigval := max(bigval, -75)
+val = linreg(bigval, lengthKC,0)
+
+bcolor = iff( val > 0, iff( val > nz(val[1]), lime, green),iff( val < nz(val[1]), red, maroon))
+scolor = noSqz ? blue : sqzOn ? black : gray 
+plot(val, color=bcolor, style=histogram, linewidth=4)
+plot(0, color=scolor, style=cross, linewidth=2)
+n1 = input(10, "Channel Length")
+n2 = input(21, "Average Length")
+
+// WAVETRENDS, VERY SENSITIVE
+
+ap = hlc3 
+esa = ema(ap, n1)
+d = ema(abs(ap - esa), n1)
+ci = (ap - esa) / (0.015 * d)
+tci = ema(ci, n2)
+ 
+wt1 = tci
+wt2 = sma(wt1,4)
+
+plot(wt1, color=green,  linewidth=4)
+plot(wt2, color=red,  linewidth=4)
+plot(cross(wt1, wt2) ? wt2 : na, color = (wt2 - wt1 > 0 ? red : lime) , style = circles, linewidth = 4)
+barcolor(cross(wt1, wt2) ? (wt2 - wt1 > 0 ? red : lime) : na)
+
+plot(cciTurbo, title="CCI Turbo", linewidth=4)
+
+plot(rsi, title="RSI", linewidth=4, color=white)
+
+
+//lines
+
+plot(75, title ="Line High",linewidth=4, color=white)
+plot(-75, title="Line Low",linewidth=4, color=white)
